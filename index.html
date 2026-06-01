@@ -130,6 +130,40 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--ink);color:var(
 .nodata div{font-size:42px;margin-bottom:10px}
 .nodata p{font-size:13px}
 .csvb{width:100%;padding:12px;background:var(--ink2);border:1px solid var(--line);border-radius:var(--rx);color:var(--fg2);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;margin-top:6px;-webkit-appearance:none}
+.tab.ar{background:rgba(245,166,35,.1);border-color:rgba(245,166,35,.4);color:var(--gold)}
+/* RAPOR */
+.rcard{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px}
+.rcard-hd{padding:11px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.rcard-hd span{color:var(--fg3);font-size:10px;font-weight:600;text-transform:none;letter-spacing:0}
+.rcard-bd{padding:14px}
+.kpi2-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0}
+.kpi2{background:var(--ink3);border:1px solid var(--line);border-radius:var(--rx);padding:10px 12px}
+.kpi2-l{font-size:9px;font-weight:700;color:var(--fg3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.kpi2-v{font-size:17px;font-weight:900}
+.kpi2-s{font-size:10px;color:var(--fg3);margin-top:2px}
+/* BAR CHART */
+.bar-item{margin-bottom:10px}
+.bar-item:last-child{margin-bottom:0}
+.bar-label{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.bar-name{font-weight:700;color:var(--fg)}
+.bar-val{font-weight:800;color:var(--fg2)}
+.bar-track{background:var(--ink3);border-radius:4px;height:8px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:.5s}
+.bar-fill.g{background:var(--em)}
+.bar-fill.r{background:var(--co)}
+.bar-fill.b{background:var(--sky)}
+.bar-fill.gold{background:var(--gold)}
+/* LINE CHART */
+.linechart{width:100%;height:80px;position:relative;margin-top:4px}
+.linechart svg{width:100%;height:100%}
+/* STAT ROW */
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.stat-row:last-child{border-bottom:none}
+.stat-l{font-size:12px;color:var(--fg2)}
+.stat-r{font-size:13px;font-weight:800}
+/* ALERT */
+.alert{background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25);border-radius:var(--rx);padding:11px 13px;font-size:12px;color:var(--co);font-weight:600;margin-bottom:8px}
+.alert-ok{background:rgba(0,201,122,.08);border-color:rgba(0,201,122,.25);color:var(--em)}
 
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink4);border:1px solid var(--line2);border-radius:30px;padding:10px 20px;font-size:12px;font-weight:700;opacity:0;transition:all .22s;z-index:999;white-space:nowrap;pointer-events:none}
@@ -206,6 +240,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--ink);color:var(
   <button class="tab as" id="tS" onclick="goTab('s')">💰 Satış</button>
   <button class="tab" id="tG" onclick="goTab('g')">📤 Gider</button>
   <button class="tab" id="tH" onclick="goTab('h')">📋 Geçmiş</button>
+  <button class="tab" id="tR" onclick="goTab('r')">📊 Rapor</button>
 </div>
 
 <!-- SATIŞ -->
@@ -278,6 +313,11 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--ink);color:var(
   <button class="csvb" onclick="doCSV()">📥 CSV İndir (Excel)</button>
 </div>
 
+
+<!-- RAPOR -->
+<div class="scr" id="sc-r">
+  <div id="raporContent"></div>
+</div>
 <div class="toast" id="toast"></div>
 <div class="ov" id="confOv">
   <div class="ccard">
@@ -488,13 +528,14 @@ function updKPI() {
 }
 
 function goTab(t) {
-  var cls = {s:'as',g:'ag',h:'ah'};
-  var ids = {s:'tS',g:'tG',h:'tH'};
+  var cls = {s:'as',g:'ag',h:'ah',r:'ar'};
+  var ids = {s:'tS',g:'tG',h:'tH',r:'tR'};
   document.querySelectorAll('.tab').forEach(function(x) { x.className = 'tab'; });
   document.querySelectorAll('.scr').forEach(function(x) { x.classList.remove('on'); });
   document.getElementById(ids[t]).classList.add(cls[t]);
   document.getElementById('sc-'+t).classList.add('on');
   if (t === 'h') renderH();
+  if (t === 'r') renderRapor();
 }
 
 function pick(btn, type, cls) {
@@ -631,7 +672,164 @@ function showToast(msg, c) {
   el.textContent = msg; el.className = 'toast on ' + c;
   clearTimeout(tT); tT = setTimeout(function() { el.classList.remove('on'); }, 2800);
 }
+
+// ══════════════════════════════════════════════
+//  RAPOR
+// ══════════════════════════════════════════════
+function renderRapor() {
+  var el = document.getElementById('raporContent');
+  if (!recs.length) {
+    el.innerHTML = '<div class="nodata"><div>📊</div><p>Henüz veri yok</p></div>';
+    return;
+  }
+
+  var today = todayStr();
+  var now = new Date();
+  var thisMonth = now.getFullYear() + '-' + p2(now.getMonth()+1);
+  var lastMonthD = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  var lastMonth = lastMonthD.getFullYear() + '-' + p2(lastMonthD.getMonth()+1);
+
+  // Totals
+  var totalS=0, totalG=0, todayS=0, todayG=0, monthS=0, monthG=0, lastMS=0, lastMG=0;
+  recs.forEach(function(r) {
+    var m = r.tarih.substring(0,7);
+    if (r.tur==='satis') { totalS+=r.tutar; if(r.tarih===today)todayS+=r.tutar; if(m===thisMonth)monthS+=r.tutar; if(m===lastMonth)lastMS+=r.tutar; }
+    else { totalG+=r.tutar; if(r.tarih===today)todayG+=r.tutar; if(m===thisMonth)monthG+=r.tutar; if(m===lastMonth)lastMG+=r.tutar; }
+  });
+  var totalNet = totalS - totalG;
+  var monthNet = monthS - monthG;
+  var margin = totalS > 0 ? Math.round(totalNet/totalS*100) : 0;
+  var growth = lastMS > 0 ? Math.round((monthS-lastMS)/lastMS*100) : 0;
+
+  // Platform totals
+  var plats = {};
+  recs.filter(function(r){return r.tur==='satis';}).forEach(function(r) {
+    var k = r.kaynak.replace(/^[^ ]+ /,'');
+    plats[k] = (plats[k]||0) + r.tutar;
+  });
+  var platArr = Object.keys(plats).map(function(k){return{n:k,v:plats[k]};}).sort(function(a,b){return b.v-a.v;});
+  var maxPlat = platArr.length ? platArr[0].v : 1;
+
+  // Category totals
+  var cats = {};
+  recs.filter(function(r){return r.tur==='gider';}).forEach(function(r) {
+    var k = r.kaynak.replace(/^[^ ]+ /,'');
+    cats[k] = (cats[k]||0) + r.tutar;
+  });
+  var catArr = Object.keys(cats).map(function(k){return{n:k,v:cats[k]};}).sort(function(a,b){return b.v-a.v;});
+  var maxCat = catArr.length ? catArr[0].v : 1;
+
+  // Last 14 days
+  var days14 = [];
+  for (var i=13; i>=0; i--) {
+    var d = new Date(); d.setDate(d.getDate()-i);
+    var ds = d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+    var s=0,g=0;
+    recs.forEach(function(r){if(r.tarih===ds){if(r.tur==='satis')s+=r.tutar;else g+=r.tutar;}});
+    days14.push({d:ds.substring(5),s:s,g:g,n:s-g});
+  }
+  var maxDay = Math.max.apply(null, days14.map(function(d){return Math.max(d.s,d.g);})) || 1;
+
+  // Best/worst day
+  var dayTotals = {};
+  recs.forEach(function(r){
+    if(!dayTotals[r.tarih])dayTotals[r.tarih]={s:0,g:0};
+    if(r.tur==='satis')dayTotals[r.tarih].s+=r.tutar;
+    else dayTotals[r.tarih].g+=r.tutar;
+  });
+  var dayNets = Object.keys(dayTotals).map(function(k){return{d:k,n:dayTotals[k].s-dayTotals[k].g};});
+  dayNets.sort(function(a,b){return b.n-a.n;});
+  var bestDay = dayNets[0] || null;
+  var worstDay = dayNets[dayNets.length-1] || null;
+
+  var html = '';
+
+  // Alerts
+  if (monthG > monthS && monthS > 0) {
+    html += '<div class="alert">⚠️ Bu ay giderler satışları geçti! +'+fmtF(monthG-monthS)+' açık var.</div>';
+  } else if (monthS > 0) {
+    html += '<div class="alert alert-ok">✅ Bu ay kârlıyız. Net: +'+fmtF(monthNet)+'</div>';
+  }
+
+  // Ana KPI
+  html += '<div class="rcard"><div class="rcard-hd">📊 Genel Özet</div><div class="rcard-bd">';
+  html += '<div class="kpi2-row" style="margin-bottom:8px">';
+  html += '<div class="kpi2"><div class="kpi2-l">Toplam Satış</div><div class="kpi2-v" style="color:var(--em)">'+fmtK(totalS)+'</div></div>';
+  html += '<div class="kpi2"><div class="kpi2-l">Toplam Gider</div><div class="kpi2-v" style="color:var(--co)">'+fmtK(totalG)+'</div></div>';
+  html += '</div><div class="kpi2-row">';
+  html += '<div class="kpi2"><div class="kpi2-l">Net Kâr/Zarar</div><div class="kpi2-v" style="color:'+(totalNet>=0?'var(--gold)':'var(--co)')+'">'+fmtK(totalNet)+'</div></div>';
+  html += '<div class="kpi2"><div class="kpi2-l">Kâr Marjı</div><div class="kpi2-v" style="color:'+(margin>=0?'var(--em)':'var(--co)')+'">%'+margin+'</div></div>';
+  html += '</div></div></div>';
+
+  // Bu ay vs geçen ay
+  html += '<div class="rcard"><div class="rcard-hd">📅 Bu Ay<span>'+(growth>=0?'▲ +':'▼ ')+growth+'%</span></div><div class="rcard-bd">';
+  html += '<div class="stat-row"><div class="stat-l">Bu ay satış</div><div class="stat-r" style="color:var(--em)">'+fmtF(monthS)+'</div></div>';
+  html += '<div class="stat-row"><div class="stat-l">Bu ay gider</div><div class="stat-r" style="color:var(--co)">'+fmtF(monthG)+'</div></div>';
+  html += '<div class="stat-row"><div class="stat-l">Bu ay net</div><div class="stat-r" style="color:'+(monthNet>=0?'var(--gold)':'var(--co)')+'">'+fmtF(monthNet)+'</div></div>';
+  html += '<div class="stat-row"><div class="stat-l">Geçen ay satış</div><div class="stat-r">'+fmtF(lastMS)+'</div></div>';
+  html += '</div></div>';
+
+  // Son 14 gün grafik
+  html += '<div class="rcard"><div class="rcard-hd">📈 Son 14 Gün</div><div class="rcard-bd">';
+  html += '<div style="display:flex;align-items:flex-end;gap:3px;height:80px;margin-bottom:8px">';
+  days14.forEach(function(d) {
+    var sh = Math.round(d.s/maxDay*70);
+    var gh = Math.round(d.g/maxDay*70);
+    var nh = d.n >= 0 ? 'var(--em)' : 'var(--co)';
+    html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px">';
+    html += '<div style="width:100%;background:var(--em);opacity:.7;height:'+sh+'px;border-radius:2px 2px 0 0"></div>';
+    html += '<div style="width:100%;background:var(--co);opacity:.7;height:'+gh+'px;border-radius:0 0 2px 2px"></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--fg3)">';
+  html += '<span>'+days14[0].d+'</span><span>'+days14[6].d+'</span><span>'+days14[13].d+'</span>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:12px;margin-top:8px;font-size:10px">';
+  html += '<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--em);border-radius:2px;display:inline-block"></span>Satış</span>';
+  html += '<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:var(--co);border-radius:2px;display:inline-block"></span>Gider</span>';
+  html += '</div></div></div>';
+
+  // Platform analizi
+  if (platArr.length) {
+    html += '<div class="rcard"><div class="rcard-hd">🏪 Platform Analizi</div><div class="rcard-bd">';
+    platArr.forEach(function(p) {
+      var pct = Math.round(p.v/totalS*100);
+      html += '<div class="bar-item">';
+      html += '<div class="bar-label"><span class="bar-name">'+p.n+'</span><span class="bar-val">'+fmtK(p.v)+' (%'+pct+')</span></div>';
+      html += '<div class="bar-track"><div class="bar-fill g" style="width:'+Math.round(p.v/maxPlat*100)+'%"></div></div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // Gider analizi
+  if (catArr.length) {
+    html += '<div class="rcard"><div class="rcard-hd">💸 Gider Analizi</div><div class="rcard-bd">';
+    catArr.forEach(function(c) {
+      var pct = Math.round(c.v/totalG*100);
+      html += '<div class="bar-item">';
+      html += '<div class="bar-label"><span class="bar-name">'+c.n+'</span><span class="bar-val">'+fmtK(c.v)+' (%'+pct+')</span></div>';
+      html += '<div class="bar-track"><div class="bar-fill r" style="width:'+Math.round(c.v/maxCat*100)+'%"></div></div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  // En iyi / kötü gün
+  if (bestDay && worstDay) {
+    html += '<div class="rcard"><div class="rcard-hd">🏆 En İyi / Kötü Günler</div><div class="rcard-bd">';
+    html += '<div class="stat-row"><div class="stat-l">🏆 En kârlı gün</div><div class="stat-r" style="color:var(--em)">'+bestDay.d+' ('+fmtF(bestDay.n)+')</div></div>';
+    html += '<div class="stat-row"><div class="stat-l">⚠️ En zor gün</div><div class="stat-r" style="color:var(--co)">'+worstDay.d+' ('+fmtF(worstDay.n)+')</div></div>';
+    html += '<div class="stat-row"><div class="stat-l">Bugün satış</div><div class="stat-r" style="color:var(--em)">'+fmtF(todayS)+'</div></div>';
+    html += '<div class="stat-row"><div class="stat-l">Bugün gider</div><div class="stat-r" style="color:var(--co)">'+fmtF(todayG)+'</div></div>';
+    html += '<div class="stat-row"><div class="stat-l">Bugün net</div><div class="stat-r" style="color:'+(todayS-todayG>=0?'var(--gold)':'var(--co)')+'">'+fmtF(todayS-todayG)+'</div></div>';
+    html += '</div></div>';
+  }
+
+  el.innerHTML = html;
+}
+
 </script>
 </body>
 </html>
-
