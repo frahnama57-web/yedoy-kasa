@@ -203,6 +203,22 @@ body{font-family:var(--fb);color:var(--t1);max-width:500px;margin:0 auto;min-hei
 .conf-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .c-no{padding:15px;border:1.5px solid var(--ln);border-radius:14px;background:var(--s3);color:var(--t2);font-family:var(--fb);font-size:14px;font-weight:700;cursor:pointer}
 .c-yes{padding:15px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--R),var(--R2));color:#fff;font-family:var(--fh);font-size:14px;font-weight:800;cursor:pointer}
+
+/* ═══ İSİM EKRANI ═══ */
+#name-screen{position:fixed;inset:0;z-index:998;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;max-width:500px;margin:0 auto}
+#name-screen.on{display:flex}
+.ns-title{font-family:var(--fh);font-size:22px;font-weight:900;letter-spacing:1px;margin-bottom:10px;text-align:center}
+.ns-title b{color:var(--G)}
+.ns-sub{font-size:13px;color:var(--t3);margin-bottom:28px;text-align:center;line-height:1.6}
+.ns-names{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:20px}
+.ns-chip{padding:10px 20px;border:1.5px solid var(--ln2);border-radius:30px;background:var(--s3);color:var(--t2);font-family:var(--fb);font-size:14px;font-weight:700;cursor:pointer;-webkit-appearance:none;transition:.12s}
+.ns-chip:active{background:var(--s4)}
+.ns-inp{width:100%;background:var(--s2);border:2px solid var(--B);border-radius:16px;padding:18px 20px;color:var(--w);font-family:var(--fh);font-size:22px;font-weight:700;outline:none;text-align:center;-webkit-appearance:none;margin-bottom:16px}
+.ns-inp::placeholder{color:var(--t3);font-size:16px;font-weight:400;font-family:var(--fb)}
+.ns-btn{width:100%;padding:18px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--G),var(--G2));color:#021308;font-family:var(--fh);font-size:16px;font-weight:800;letter-spacing:.5px;cursor:pointer;-webkit-appearance:none}
+.ns-btn:disabled{opacity:.3;cursor:not-allowed}
+.dev-badge{font-size:10px;font-weight:700;color:var(--t3);text-align:right;padding:4px 2px 0;letter-spacing:.5px}
+.c-yes.green{background:linear-gradient(135deg,var(--G),var(--G2));color:#021308}
 </style>
 </head>
 <body>
@@ -236,6 +252,21 @@ body{font-family:var(--fb);color:var(--t1);max-width:500px;margin:0 auto;min-hei
   <div class="pin-hint">Kod: dükkan kodunuz</div>
 </div>
 
+
+<!-- ════ İSİM EKRANI ════ -->
+<div id="name-screen">
+  <div class="pin-logo-placeholder">👤</div>
+  <div class="ns-title">Merhaba! <b>Adın nedir?</b></div>
+  <div class="ns-sub">Her kayıt senin adınla kaydedilecek.<br>Bu bilgi sadece bu cihazda saklanır.</div>
+  <div class="ns-names">
+    <button class="ns-chip" onclick="setNameChip('Mohammad')">Mohammad</button>
+    <button class="ns-chip" onclick="setNameChip('Şiva')">Şiva</button>
+    <button class="ns-chip" onclick="setNameChip('Zeynep')">Zeynep</button>
+  </div>
+  <input class="ns-inp" id="nameInp" placeholder="Adını yaz veya seç..." maxlength="20" oninput="chkNameBtn()">
+  <button class="ns-btn" id="nameBtn" onclick="saveName()" disabled>✓ Devam Et</button>
+</div>
+
 <!-- ════ HEADER ════ -->
 <div class="hdr">
   <div class="h-row">
@@ -245,14 +276,15 @@ body{font-family:var(--fb);color:var(--t1);max-width:500px;margin:0 auto;min-hei
         <div class="s-dot" id="sdot"></div>
         <span class="s-txt" id="slbl">—</span>
       </div>
-      <div class="date-pill" id="dchip"></div>
+      <div class="date-pill" id="dchip" onclick="showNameScreen()" title="İsim değiştir"></div>
     </div>
   </div>
   <div class="krow">
     <div class="kcard gk"><div class="k-lbl">Satış</div><div class="k-val" id="kS">—</div></div>
     <div class="kcard rk"><div class="k-lbl">Gider</div><div class="k-val" id="kG">—</div></div>
     <div class="kcard"><div class="k-lbl">Net</div><div class="k-val" id="kN">—</div></div>
-  </div>
+    <div class="dev-badge" id="devBadge"></div>
+</div>
 </div>
 
 <div class="tabs">
@@ -356,6 +388,19 @@ body{font-family:var(--fb);color:var(--t1);max-width:500px;margin:0 auto;min-hei
   </div>
 </div>
 
+
+<!-- TUTAR UYARI CONFIRM -->
+<div class="ov" id="warnOv">
+  <div class="conf">
+    <h3 id="warnTitle">⚠️ Tutar Doğru mu?</h3>
+    <p id="warnTxt" style="white-space:pre-line"></p>
+    <div class="conf-btns">
+      <button class="c-no" onclick="closeWarn()">Hayır, Düzelt</button>
+      <button class="c-yes green" onclick="doSaveConfirmed()">Evet, Doğru</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════
 // SABITLER — Buraya dokunma
@@ -363,7 +408,10 @@ body{font-family:var(--fb);color:var(--t1);max-width:500px;margin:0 auto;min-hei
 var FB_URL = 'https://yedoy-pilav-kasa-default-rtdb.europe-west1.firebasedatabase.app';
 var FB_PASS = 'Yedoy2000';
 var APP_PIN = '2025'; // Erişim kodu
-var DEVICE_KEY = 'yedoy_dev_v1';
+var DEVICE_KEY = 'yedoy_dev_v2';
+var WARN_SATIS = 50000;
+var WARN_GIDER = 25000;
+var pendingSaveType = null;
 
 // ═══════════════════════════════════════
 // STATE
@@ -411,8 +459,41 @@ function checkPin() {
 // ═══════════════════════════════════════
 function boot() {
   setChip();
-  try { DEV = localStorage.getItem(DEVICE_KEY) || 'Kasa'; } catch(e) {}
+  var savedName = '';
+  try { savedName = localStorage.getItem(DEVICE_KEY) || ''; } catch(e) {}
+  if (savedName && savedName !== 'Kasa') {
+    DEV = savedName;
+    updDevBadge();
+    loadRecs();
+  } else {
+    document.getElementById('name-screen').classList.add('on');
+  }
+}
+function setNameChip(name) {
+  document.getElementById('nameInp').value = name;
+  chkNameBtn();
+}
+function chkNameBtn() {
+  var v = document.getElementById('nameInp').value.trim();
+  document.getElementById('nameBtn').disabled = v.length < 2;
+}
+function saveName() {
+  var v = document.getElementById('nameInp').value.trim();
+  if (v.length < 2) return;
+  DEV = v;
+  try { localStorage.setItem(DEVICE_KEY, v); } catch(e) {}
+  document.getElementById('name-screen').classList.remove('on');
+  updDevBadge();
   loadRecs();
+}
+function showNameScreen() {
+  document.getElementById('nameInp').value = DEV || '';
+  chkNameBtn();
+  document.getElementById('name-screen').classList.add('on');
+}
+function updDevBadge() {
+  var el = document.getElementById('devBadge');
+  el.textContent = DEV ? '👤 ' + DEV : '';
 }
 
 function getBase() { return FB_URL + '/' + encodeURIComponent(FB_PASS) + '/records'; }
@@ -467,12 +548,31 @@ function doSave(type) {
   if (saving) return;
   var amt=parseInt(type==='satis'?sV:gV,10);
   var k=type==='satis'?selP:selK;
+  if (!amt||!k) return;
+  // Abartılı tutar kontrolü
+  var limit = type==='satis' ? WARN_SATIS : WARN_GIDER;
+  if (amt >= limit) {
+    pendingSaveType = type;
+    var kategori = k.replace(/^[^ ]+ /,'');
+    document.getElementById('warnTitle').textContent = '⚠️ Tutar Doğru mu?';
+    document.getElementById('warnTxt').textContent = (type==='satis'?'💰 Satış':'📤 Gider') + ' — ' + kategori + '\n\nGirilen tutar: ' + fmtF(amt) + '\n\nBu tutar yüksek görünüyor. Gerçekten ' + fmtF(amt) + ' mi?';
+    document.getElementById('warnOv').classList.add('on');
+    return;
+  }
+  doSaveReal(type);
+}
+function closeWarn() { pendingSaveType=null; document.getElementById('warnOv').classList.remove('on'); }
+function doSaveConfirmed() { document.getElementById('warnOv').classList.remove('on'); doSaveReal(pendingSaveType); pendingSaveType=null; }
+function doSaveReal(type) {
+  if (saving) return;
+  var amt=parseInt(type==='satis'?sV:gV,10);
+  var k=type==='satis'?selP:selK;
   var note=document.getElementById(type==='satis'?'sNot':'gNot').value.trim();
   if (!amt||!k) return;
   saving=true;
   var btn=document.getElementById(type==='satis'?'sBtn':'gBtn');
   btn.textContent='Kaydediliyor...'; btn.disabled=true;
-  var rec={tarih:todayStr(),saat:timeStr(),tur:type,kaynak:k,tutar:amt,not:note,cihaz:DEV,ts:Date.now()};
+  var rec={tarih:todayStr(),saat:timeStr(),tur:type,kaynak:k,tutar:amt,not:note,cihaz:DEV||'Kasa',ts:Date.now()};
   fetch(getBase()+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)})
     .then(function(r){
       if(r.status===401||r.status===403||r.status===405){
@@ -569,7 +669,7 @@ function renderH() {
     h+='<span class="d-net '+(dn>=0?'p':'n')+'">'+(dn>=0?'+':'')+fmtK(dn)+'</span></div></div>';
     items.forEach(function(r){
       var name=r.kaynak.replace(/^[^ ]+ /,'');
-      var dev=(r.cihaz&&r.cihaz!=='Kasa')?' · '+r.cihaz:'';
+      var dev=r.cihaz?' · '+r.cihaz:'';
       var delBtn=isToday?'<button class="tx-del show" onclick="askDel(\''+r._k+'\')">×</button>':'';
       h+='<div class="tx"><div class="tx-ico">'+ico(r.kaynak)+'</div>';
       h+='<div class="tx-inf"><div class="tx-nm">'+name+'</div>';
@@ -620,14 +720,16 @@ function renderRapor(){
   var today=todayStr();
   var filt=recs,prev=[];
   if(rPeriod>0){
-    var cut=new Date();cut.setDate(cut.getDate()-rPeriod);
-    var cutS=cut.getFullYear()+'-'+p2(cut.getMonth()+1)+'-'+p2(cut.getDate());
+    // DÜZELTME: bugün DAHİL son N gün (rPeriod=7 → bugün+önceki 6 gün)
+    var cutDate=new Date(); cutDate.setDate(cutDate.getDate()-(rPeriod-1)); cutDate.setHours(0,0,0,0);
+    var cutS=cutDate.getFullYear()+'-'+p2(cutDate.getMonth()+1)+'-'+p2(cutDate.getDate());
+    // Önceki dönem: aynı uzunlukta, bir adım önce
+    var prevEndDate=new Date(cutDate); prevEndDate.setDate(prevEndDate.getDate()-1);
+    var prevStartDate=new Date(prevEndDate); prevStartDate.setDate(prevStartDate.getDate()-(rPeriod-1));
+    var pES=prevEndDate.getFullYear()+'-'+p2(prevEndDate.getMonth()+1)+'-'+p2(prevEndDate.getDate());
+    var pSS=prevStartDate.getFullYear()+'-'+p2(prevStartDate.getMonth()+1)+'-'+p2(prevStartDate.getDate());
     filt=recs.filter(function(r){return r.tarih>=cutS;});
-    var pEnd=new Date();pEnd.setDate(pEnd.getDate()-rPeriod);
-    var pSt=new Date();pSt.setDate(pSt.getDate()-rPeriod*2);
-    var pES=pEnd.getFullYear()+'-'+p2(pEnd.getMonth()+1)+'-'+p2(pEnd.getDate());
-    var pSS=pSt.getFullYear()+'-'+p2(pSt.getMonth()+1)+'-'+p2(pSt.getDate());
-    prev=recs.filter(function(r){return r.tarih>=pSS&&r.tarih<pES;});
+    prev=recs.filter(function(r){return r.tarih>=pSS&&r.tarih<=pES;});
   }
   var tS=0,tG=0,pS=0,pG=0;
   filt.forEach(function(r){if(r.tur==='satis')tS+=r.tutar;else tG+=r.tutar;});
@@ -661,7 +763,7 @@ function renderRapor(){
   h+='<div class="kp"><div class="kp-l">Toplam Satış</div><div class="kp-v" style="color:var(--G)">'+fmtK(tS)+'</div><div class="kp-s">'+(sGr!==null?(sGr>=0?'▲ +':'▼ ')+sGr+'% önceki':'—')+'</div></div>';
   h+='<div class="kp"><div class="kp-l">Toplam Gider</div><div class="kp-v" style="color:var(--R)">'+fmtK(tG)+'</div><div class="kp-s">'+(gGr!==null?(gGr>=0?'▲ +':'▼ ')+gGr+'% önceki':'—')+'</div></div>';
   h+='</div><div class="kpis"><div class="kp"><div class="kp-l">Net Kâr/Zarar</div><div class="kp-v" style="color:'+(tN>=0?'var(--Y)':'var(--R)')+'">'+fmtK(tN)+'</div></div>';
-  h+='<div class="kp"><div class="kp-l">Kâr Marjı</div><div class="kp-v" style="color:'+(mar>=0?'var(--G)':'var(--R)')+'">%'+mar+'</div></div></div></div></div>';
+  h+='<div class="kp"><div class="kp-l">Kâr Marjı</div><div class="kp-v" style="color:'+(mar>=20?'var(--G)':mar>=0?'var(--Y)':'var(--R)')+'">%'+mar+'</div></div></div></div></div>';
   h+='<div class="rc"><div class="rc-hd"><span class="rc-t">BUGÜN</span></div><div class="rc-bd">';
   h+='<div class="sr"><div class="sl">Satış</div><div class="sv" style="color:var(--G)">'+fmtF(todS)+'</div></div>';
   h+='<div class="sr"><div class="sl">Gider</div><div class="sv" style="color:var(--R)">'+fmtF(todG)+'</div></div>';
